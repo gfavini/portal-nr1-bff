@@ -35,6 +35,11 @@ out/
 
 ### VS Code ###
 .vscode/
+.agents/
+skills-lock**
 
 ### Java ###
 /target/
+
+### Docker Volumes ###
+.keycloak_data/
