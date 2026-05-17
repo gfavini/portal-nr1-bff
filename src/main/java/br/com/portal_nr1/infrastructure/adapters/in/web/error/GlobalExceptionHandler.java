@@ -19,6 +19,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import br.com.portal_nr1.application.exception.GroupAlreadyExistsException;
+import br.com.portal_nr1.application.exception.QuestionnaireNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
@@ -72,6 +74,22 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(NoHandlerFoundException.class)
 	public ResponseEntity<ApiErrorResponse> handleNotFound(NoHandlerFoundException ex, HttpServletRequest request) {
 		return build(HttpStatus.NOT_FOUND, "Resource not found", request, List.of());
+	}
+
+	@ExceptionHandler(QuestionnaireNotFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleQuestionnaireNotFound(
+			QuestionnaireNotFoundException ex,
+			HttpServletRequest request
+	) {
+		return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+	}
+
+	@ExceptionHandler(GroupAlreadyExistsException.class)
+	public ResponseEntity<ApiErrorResponse> handleGroupAlreadyExists(
+			GroupAlreadyExistsException ex,
+			HttpServletRequest request
+	) {
+		return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
 	}
 
 	@ExceptionHandler(AccessDeniedException.class)

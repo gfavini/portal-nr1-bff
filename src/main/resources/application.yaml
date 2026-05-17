@@ -45,6 +45,13 @@ keycloak:
   client-id: questionnaire-bff
   logout-uri: ${KEYCLOAK_LOGOUT_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/logout}
   token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/token}
+  admin:
+    server-url: ${KEYCLOAK_ADMIN_SERVER_URL:http://localhost:8081}
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:password}
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+  respondent:
+    role-name: ${KEYCLOAK_RESPONDENT_ROLE_NAME:RESPONDENT}
 
 springdoc:
   swagger-ui:

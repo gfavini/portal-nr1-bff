@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.portal_nr1.application.exception.QuestionnaireNotFoundException;
+import br.com.portal_nr1.application.exception.QuestionnaireNotFoundInRepoException;
 import br.com.portal_nr1.application.ports.in.FetchQuestionnaireByVersionUseCase;
 import br.com.portal_nr1.application.ports.in.FetchQuestionnairesUseCase;
 import br.com.portal_nr1.application.ports.in.SaveQuestionnaireUseCase;
@@ -39,9 +41,13 @@ public class QuestionnaireService implements FetchQuestionnairesUseCase,
     }
 
     @Override
-    public Questionnaire fetchQuestionnaire(String version) {
-        Questionnaire questionnaire = questionnaireRepository.fetchByVersion(version);
-        return questionnaire;
+    public Questionnaire fetchQuestionnaire(Integer version) {
+        try {
+            Questionnaire questionnaire = questionnaireRepository.fetchByVersion(version);
+            return questionnaire;
+        }catch(QuestionnaireNotFoundInRepoException ex) {
+            throw new QuestionnaireNotFoundException("Questionario da versao " + version + " nao encontrado");            
+        }
     }
 
     @Transactional

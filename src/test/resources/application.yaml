@@ -21,6 +21,16 @@ spring:
         jwt:
           jwk-set-uri: http://localhost:9999/jwks
 
+keycloak:
+  realm: test-realm
+  admin:
+    server-url: http://localhost:8080
+    username: admin
+    password: password
+    client-id: admin-cli
+  respondent:
+    role-name: RESPONDENT
+
 server:
   servlet:
     session:

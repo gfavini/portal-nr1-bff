@@ -1,7 +1,6 @@
 package br.com.portal_nr1.infrastructure.adapters.in.web;
 
 import java.security.Principal;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.security.access.prepost.PreAuthorize;
