@@ -7,7 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "Escopo do ultimo convite enviado", allowableValues = {"all", "partial"})
 public enum InviteScopeResponse {
     ALL("all"),
-    PARTIAL("partial");
+    PARTIAL("partial"),
+    NONE("none");
 
     private final String value;
 
@@ -21,9 +22,11 @@ public enum InviteScopeResponse {
     }
 
     public static InviteScopeResponse fromDomain(InviteScope scope) {
+        if (scope == null ) return NONE;
         return switch (scope) {
             case ALL -> ALL;
             case PARTIAL -> PARTIAL;
+            default -> NONE;
         };
     }
 }

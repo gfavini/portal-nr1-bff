@@ -46,7 +46,7 @@ public class GroupController {
     } 
 
     @PutMapping("/{id}")
-    public GroupResponseItem putMethodName(@PathVariable String id, @RequestBody GroupRequestItem request) {
+    public GroupResponseItem updateGroup(@PathVariable String id, @RequestBody GroupRequestItem request) {
         Group group = GroupsMapper.toDomain(request);
         Group responseItem = updateGroupUseCase.update(id, group);
         return GroupsMapper.toResponse(responseItem);

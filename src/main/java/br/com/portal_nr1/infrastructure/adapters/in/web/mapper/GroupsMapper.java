@@ -45,7 +45,8 @@ public final class GroupsMapper {
             return null;
         }
 
-        return new GroupResponseItem(
+        InviteScopeResponse i = InviteScopeResponse.fromDomain(null);
+        GroupResponseItem g = new GroupResponseItem(
                 group.getId(),
                 group.getName(),
                 group.getRespondentCount(),
@@ -56,6 +57,8 @@ public final class GroupsMapper {
                 group.getExpiresAt(),
                 group.getLastInviteSentAt(),
                 InviteScopeResponse.fromDomain(group.getLastInviteScope()));
+
+        return g;
     }
 
     public static Group toDomain(GroupRequestItem request) {
@@ -63,7 +66,7 @@ public final class GroupsMapper {
             return null;
         }
 
-        return new Group(
+        Group g =  new Group(
                 null,
                 request.name(),
                 null,
@@ -74,6 +77,7 @@ public final class GroupsMapper {
                 request.expiresAt(),
                 null,
                 null);
+        return g;
     }
 
     public static GroupResponseItem toResponse(Group responseItem) {
