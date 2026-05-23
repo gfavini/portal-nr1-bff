@@ -22,13 +22,19 @@ public class InMemoryGroupRepository implements GroupRepositoyPort {
     }
 
     @Override
-    public void save(Group group) {
+    public Group save(Group group) {
         groups.put(group.getId(), group);
+        return group;
     }
 
     @Override
     public Group findById(String id) {
         return groups.get(id);
+    }
+
+    @Override
+    public void deleteById(String groupId) {
+        groups.remove(groupId);
     }
     
 }

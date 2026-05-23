@@ -5,7 +5,10 @@ import java.util.stream.Collectors;
 
 import br.com.portal_nr1.domain.model.Group;
 import br.com.portal_nr1.domain.model.Groups;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupUpdatedResponse;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupClosedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupCreatedResponse;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupDeletedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupRequestItem;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupResponseItem;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupStatusResponse;
@@ -23,11 +26,37 @@ public final class GroupsMapper {
         return new GroupsResponse(items);
     }
 
-    public static GroupCreatedResponse toResponse(String groupId) {
+    public static GroupCreatedResponse toCreatedResponse(String groupId) {
         if (groupId == null) {
             return null;
         }
         return new GroupCreatedResponse(groupId);
+    }
+
+    public static GroupDeletedResponse toDeletedResponse(String groupId) {
+        if (groupId == null) {
+            return null;
+        }
+        return new GroupDeletedResponse(groupId);
+    }
+
+    public static GroupUpdatedResponse toUpdatedResponse(Group responseItem) {
+        return new GroupUpdatedResponse(toItem(responseItem));
+    }
+
+    public static GroupClosedResponse toClosedResponse(Group responseItem) {
+        return new GroupClosedResponse(toItem(responseItem));
+    }
+
+    // FIXME : O anti-padrão me fodendo de novo.... mais facil criar uma classe de
+    // retorno da camada de aplicação
+    public static <T> T toResponse(String groupId, Class<T> targetClass) {
+        if (targetClass.equals(GroupCreatedResponse.class)) {
+            return targetClass.cast(toCreatedResponse(groupId));
+        } else if (targetClass.equals(GroupDeletedResponse.class)) {
+            return targetClass.cast(toDeletedResponse(groupId));
+        }
+        throw new IllegalArgumentException("Tipo de resposta não suportado: " + targetClass.getName());
     }
 
     private static ArrayList<GroupResponseItem> toItems(Groups groups) {
@@ -45,8 +74,7 @@ public final class GroupsMapper {
             return null;
         }
 
-        InviteScopeResponse i = InviteScopeResponse.fromDomain(null);
-        GroupResponseItem g = new GroupResponseItem(
+        return new GroupResponseItem(
                 group.getId(),
                 group.getName(),
                 group.getRespondentCount(),
@@ -58,7 +86,6 @@ public final class GroupsMapper {
                 group.getLastInviteSentAt(),
                 InviteScopeResponse.fromDomain(group.getLastInviteScope()));
 
-        return g;
     }
 
     public static Group toDomain(GroupRequestItem request) {
@@ -66,7 +93,7 @@ public final class GroupsMapper {
             return null;
         }
 
-        Group g =  new Group(
+        return new Group(
                 null,
                 request.name(),
                 null,
@@ -77,10 +104,6 @@ public final class GroupsMapper {
                 request.expiresAt(),
                 null,
                 null);
-        return g;
     }
 
-    public static GroupResponseItem toResponse(Group responseItem) {
-        return toItem(responseItem);
-    }
 }

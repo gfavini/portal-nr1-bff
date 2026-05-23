@@ -28,16 +28,19 @@ public class QuestionnaireService implements FetchQuestionnairesUseCase,
 
     @Override
     public Questionnaires fetchQuestionnaires() {
+        Questionnaires response = new Questionnaires();
 
-        Questionnaire current = questionnaireRepository.fetchLatest();
+        try{
+            Questionnaire current = questionnaireRepository.fetchLatest();
+            response.setCurrent(current);
+        }catch(QuestionnaireNotFoundInRepoException err) {
+            response.setCurrent(null);
+        }
+
         ArrayList<Questionnaire> versions = questionnaireRepository.fetchAll();
+        response.setVersions(versions);
 
-        Questionnaires questionnaires = Questionnaires.builder()
-            .current(current)
-            .versions(versions)
-            .build();
-
-        return questionnaires;
+        return response;
     }
 
     @Override

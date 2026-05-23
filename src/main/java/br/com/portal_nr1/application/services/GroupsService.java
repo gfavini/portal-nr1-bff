@@ -10,6 +10,8 @@ import br.com.portal_nr1.application.exception.GroupAlreadyExistsException;
 import br.com.portal_nr1.application.exception.GroupClosedException;
 import br.com.portal_nr1.application.exception.GroupNotFoundException;
 import br.com.portal_nr1.application.exception.QuestionnaireNotFoundException;
+import br.com.portal_nr1.application.ports.in.CloseGroupUseCase;
+import br.com.portal_nr1.application.ports.in.DeleteGroupUseCase;
 import br.com.portal_nr1.application.ports.in.FetchGroupsUseCase;
 import br.com.portal_nr1.application.ports.in.ProvisionGroupUseCase;
 import br.com.portal_nr1.application.ports.in.UpdateGroupUseCase;
@@ -21,16 +23,24 @@ import br.com.portal_nr1.domain.model.GroupStatus;
 import br.com.portal_nr1.domain.model.Groups;
 import br.com.portal_nr1.domain.model.Questionnaire;
 import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakGroupNameConflictException;
+import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakGroupNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class GroupsService implements FetchGroupsUseCase, ProvisionGroupUseCase, UpdateGroupUseCase {
+public class GroupsService implements FetchGroupsUseCase,
+        ProvisionGroupUseCase,
+        UpdateGroupUseCase,
+        DeleteGroupUseCase,
+        CloseGroupUseCase {
 
     private final GroupRepositoyPort groupsRepositoy;
     private final QuestionnaireRespositoryPort questionnaireRepository;
     private final UserIdentityProvisioningPort userIdentityProvisioningPort;
 
+    // TODO: No futuro as operações do grupo devem ser transacional, ou seja,
+    // se a operação do Dynamo falha deve reverter a operação do Keycloak, e vice
+    // versa.
     @Override
     public Groups fetch() {
         Groups groups = groupsRepositoy.fetchAll();
@@ -100,12 +110,16 @@ public class GroupsService implements FetchGroupsUseCase, ProvisionGroupUseCase,
             throw new GroupClosedException("Cannot update a closed group.");
         }
 
-        if (!group.getName().equalsIgnoreCase(existingGroup.getName())){
+        if (!group.getName().equalsIgnoreCase(existingGroup.getName())) {
             try {
                 userIdentityProvisioningPort.updateGroupName(existingGroup.getId(), group.getName());
                 existingGroup.setName(group.getName());
+
+                // FIXME: essa excessao deveria estar em qual camada? Estranho que nao deu erro
+                // nos testes de arquitetura
             } catch (KeycloakGroupNameConflictException e) {
-                throw new GroupAlreadyExistsException("Another group with the same name already exists in the identity provider.", e);
+                throw new GroupAlreadyExistsException(
+                        "Another group with the same name already exists in the identity provider.", e);
             }
         }
 
@@ -123,6 +137,40 @@ public class GroupsService implements FetchGroupsUseCase, ProvisionGroupUseCase,
 
         groupsRepositoy.save(existingGroup);
         return existingGroup;
+    }
+
+    @Override
+    public String delete(String groupId) {
+
+        Group existingGroup = groupsRepositoy.findById(groupId);
+
+        if (existingGroup == null) {
+            throw new GroupNotFoundException("Group not found with id: " + groupId);
+        }
+
+        try {
+            userIdentityProvisioningPort.deleteGroup(groupId);
+        } catch (KeycloakGroupNotFoundException ex) {
+            throw new GroupNotFoundException("Group not found with id: " + groupId);
+        }
+
+        groupsRepositoy.deleteById(groupId);
+        return groupId;
+
+    }
+
+    @Override
+    public Group close(String groupId) {
+        Group toUpdate = groupsRepositoy.findById(groupId);
+
+        if (toUpdate == null) {
+            throw new GroupNotFoundException("Group not found with id: " + groupId);
+        }
+
+        toUpdate.setStatus(GroupStatus.CLOSED);
+        Group updated = groupsRepositoy.save(toUpdate);
+
+        return updated;
     }
 
 }

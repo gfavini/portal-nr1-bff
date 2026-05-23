@@ -2,13 +2,12 @@ package br.com.portal_nr1.infrastructure.adapters.out.persistence;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Repository;
 
 import br.com.portal_nr1.application.exception.QuestionnaireNotFoundInRepoException;
-import br.com.portal_nr1.application.exception.QuestionnaireRepositoryException;
+
 import br.com.portal_nr1.application.ports.out.QuestionnaireRespositoryPort;
 import br.com.portal_nr1.domain.model.Questionnaire;
 
@@ -19,6 +18,9 @@ public class InMemoryQuestionnaireRespository implements QuestionnaireRespositor
 
 	@Override
 	public ArrayList<Questionnaire> fetchAll() {
+
+		if(questionnaires.isEmpty()) return new ArrayList<>();
+
 		return questionnaires.entrySet().stream()
 			.filter(entry -> !entry.getKey().equals("QUEST#LATEST"))
 			.map(entry -> entry.getValue())

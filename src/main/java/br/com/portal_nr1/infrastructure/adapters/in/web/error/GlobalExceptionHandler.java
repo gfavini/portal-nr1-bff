@@ -20,6 +20,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import br.com.portal_nr1.application.exception.GroupAlreadyExistsException;
+import br.com.portal_nr1.application.exception.GroupNotFoundException;
 import br.com.portal_nr1.application.exception.QuestionnaireNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -91,6 +92,15 @@ public class GlobalExceptionHandler {
 	) {
 		return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
 	}
+
+	@ExceptionHandler(GroupNotFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleGroupNotFound( 
+			GroupNotFoundException ex,
+			HttpServletRequest request
+	) {
+		return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+	}
+
 
 	@ExceptionHandler(AccessDeniedException.class)
 	public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {

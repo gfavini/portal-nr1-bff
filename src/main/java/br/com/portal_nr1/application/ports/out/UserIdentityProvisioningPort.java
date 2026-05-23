@@ -9,4 +9,5 @@ public interface UserIdentityProvisioningPort {
     void assignRespondentToGroup(String groupId, ProvisionedRespondent respondent);
     ProvisionedRespondent provisionRespondentAndAssignGroup(Respondent respondent, String groupId);
     String updateGroupName(String id, String name);
+    void deleteGroup(String groupId);
 }

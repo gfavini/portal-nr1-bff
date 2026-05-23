@@ -19,6 +19,7 @@ import br.com.portal_nr1.domain.model.ProvisionedRespondent;
 import br.com.portal_nr1.domain.model.Respondent;
 import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakEmailConflictException;
 import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakGroupNameConflictException;
+import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakGroupNotFoundException;
 import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakProvisioningException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
@@ -151,6 +152,22 @@ public class KeycloakUserIdentityProvisioningAdapter implements UserIdentityProv
         return id;
     }
 
+    @Override
+    public void deleteGroup(String groupId) throws KeycloakGroupNotFoundException, KeycloakProvisioningException {
+        try {
+            keycloak.realm(targetRealm).groups().group(groupId).remove();
+        } catch (WebApplicationException e) {
+            if (e.getResponse().getStatus() == 404) {
+                log.warn("Group with ID {} not found", groupId);
+                throw new KeycloakGroupNotFoundException("Group not found for delete");
+            }
+            log.error("Failed to delete group. Status: {}, Response: {}", e.getResponse().getStatus(),
+                    e.getResponse().readEntity(String.class));
+            throw new KeycloakProvisioningException("Failed to delete group in Keycloak", e);
+        }
+
+    }
+
     private static String generateRandomPassword() {
         String upperCaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         String lowerCaseLetters = "abcdefghijklmnopqrstuvwxyz";
@@ -177,5 +194,4 @@ public class KeycloakUserIdentityProvisioningAdapter implements UserIdentityProv
         return password.toString();
 
     }
-
 }

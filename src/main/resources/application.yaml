@@ -48,8 +48,9 @@ keycloak:
   admin:
     server-url: ${KEYCLOAK_ADMIN_SERVER_URL:http://localhost:8081}
     username: ${KEYCLOAK_ADMIN_USERNAME:admin}
-    password: ${KEYCLOAK_ADMIN_PASSWORD:password}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
     client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:YV6SOenIYbrEwp5CAs6DxvDkqaGhQ2g5}
   respondent:
     role-name: ${KEYCLOAK_RESPONDENT_ROLE_NAME:RESPONDENT}
 
