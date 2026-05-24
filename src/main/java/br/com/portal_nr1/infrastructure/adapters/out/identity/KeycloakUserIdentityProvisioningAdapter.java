@@ -3,7 +3,6 @@ package br.com.portal_nr1.infrastructure.adapters.out.identity;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import org.hibernate.validator.internal.engine.valueextraction.ValueExtractorDescriptor.Key;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.GroupResource;
 import org.keycloak.admin.client.resource.UserResource;
@@ -41,11 +40,10 @@ public class KeycloakUserIdentityProvisioningAdapter implements UserIdentityProv
     @Override
     public ProvisionedRespondent provisionRespondent(Respondent respondent) throws KeycloakProvisioningException {
         UserRepresentation user = new UserRepresentation();
-        user.setUsername(respondent.email());
-        user.setEmail(respondent.email());
-        user.setFirstName(respondent.email().split("@")[0]); // TODO: Receber o nome e sobrenome como parte do cadastro
-                                                             // do respondente?
-        user.setLastName("Respondent");
+        user.setUsername(respondent.getEmail());
+        user.setEmail(respondent.getEmail());
+        user.setFirstName(respondent.getFirstName());
+        user.setLastName(respondent.getLastName());
         user.setEnabled(true);
 
         Response response = keycloak.realm(targetRealm).users().create(user);
@@ -57,9 +55,8 @@ public class KeycloakUserIdentityProvisioningAdapter implements UserIdentityProv
             CredentialRepresentation passwordCred = new CredentialRepresentation();
             passwordCred.setTemporary(true);
             passwordCred.setType(CredentialRepresentation.PASSWORD);
-            passwordCred.setValue(generateRandomPassword()); // TODO: Gerar senha aleatória e enviar por email para o
-                                                             // respondente
-
+            passwordCred.setValue(generateRandomPassword()); 
+            
             UserResource userResource = keycloak.realm(targetRealm).users().get(userId);
             userResource.resetPassword(passwordCred);
 
@@ -67,9 +64,9 @@ public class KeycloakUserIdentityProvisioningAdapter implements UserIdentityProv
             userResource.roles().realmLevel().add(Collections.singletonList(role));
 
             log.info("User created with ID: {}", userId);
-            return new ProvisionedRespondent(userId, respondent.email(), passwordCred.getValue());
+            return new ProvisionedRespondent(userId, respondent.getEmail(), passwordCred.getValue());
         } else if (response.getStatus() == 409) {
-            log.warn("User with email {} already exists", respondent.email());
+            log.warn("User with email {} already exists", respondent.getEmail());
             throw new KeycloakEmailConflictException("A user with the same email already exists in Keycloak");
         } else {
             log.error("Failed to create user. Status: {}, Response: {}", response.getStatus(),

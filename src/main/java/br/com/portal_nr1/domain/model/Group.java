@@ -1,7 +1,7 @@
 package br.com.portal_nr1.domain.model;
 
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.Set;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +16,7 @@ public class Group {
     private String id;
     private String name;
     private Integer respondentCount;
-    private ArrayList<String> departments;
+    private Set<String> departments;
     private String assignedQuestionnaireId;
     private Integer assignedQuestionnaireVersion;
     private GroupStatus status;

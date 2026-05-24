@@ -4,14 +4,13 @@ import java.util.ArrayList;
 
 import org.springframework.stereotype.Component;
 
-import br.com.portal_nr1.application.ports.out.GroupInvitationNotificationPort;
-import br.com.portal_nr1.domain.model.Group;
+import br.com.portal_nr1.application.ports.out.InvitationNotificationPort;
 import lombok.extern.log4j.Log4j2;
 
 
 @Component
 @Log4j2
-public class MockEmailGroupInvitationAdapter implements GroupInvitationNotificationPort {
+public class MockEmailGroupInvitationAdapter implements InvitationNotificationPort {
 
     @Override
     public void sendGroupInvitations(ArrayList<String> emails) {

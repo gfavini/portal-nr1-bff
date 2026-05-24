@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
+import java.util.HashSet;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -175,7 +175,7 @@ class GroupControllerIntegrationTest {
                 Instant.now().plus(30, ChronoUnit.DAYS), "OPEN");
 
         Instant expiresAt = Instant.now().plus(30, ChronoUnit.DAYS);
-        Group updated = new Group("group-id-1", "Grupo A Updated", 0, new ArrayList<>(),
+        Group updated = new Group("group-id-1", "Grupo A Updated", 0, new HashSet<>(),
                 "q-id-456", 2, GroupStatus.OPEN, expiresAt, null, null);
 
         when(updateGroupUseCase.update(eq("group-id-1"), any())).thenReturn(updated);

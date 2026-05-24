@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import br.com.portal_nr1.domain.model.Group;
 import br.com.portal_nr1.domain.model.Groups;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupUpdatedResponse;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupReopenedReponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupClosedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupCreatedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupDeletedResponse;
@@ -104,6 +105,13 @@ public final class GroupsMapper {
                 request.expiresAt(),
                 null,
                 null);
+    }
+
+    public static GroupReopenedReponse toReopenedGroupResponse(Group responseItem) {
+        return new GroupReopenedReponse(
+            toItem(responseItem)
+        );
+
     }
 
 }

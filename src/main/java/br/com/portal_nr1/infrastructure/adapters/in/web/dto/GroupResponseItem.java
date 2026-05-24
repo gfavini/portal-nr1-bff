@@ -1,7 +1,7 @@
 package br.com.portal_nr1.infrastructure.adapters.in.web.dto;
 
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.Set;
 
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,7 +16,7 @@ public record GroupResponseItem(
     @Schema(description = "Quantidade de respondentes associados ao grupo", example = "10")
     Integer respondentsCount,
     @ArraySchema(schema = @Schema(implementation = String.class), arraySchema = @Schema(description = "Set de departamentos associados ao grupo"))
-    ArrayList<String> departments,
+    Set<String> departments,
     @Schema(description = "Identificador do questionario atribuido", example = "c1d2e3f4-5g6h-7i8j-9k0l-1m2n3o4p5q6r")
     String assignedQuestionnaireId,
     @Schema(description = "Versao do questionario atribuido", example = "1")

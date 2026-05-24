@@ -8,4 +8,5 @@ public interface GroupRepositoyPort {
     Group save(Group group);
     Group findById(String id);
     void deleteById(String groupId);
+    void addDepartment(String id, String department);
 }

@@ -2,7 +2,7 @@ package br.com.portal_nr1.application.ports.out;
 
 import java.util.ArrayList;
 
-public interface GroupInvitationNotificationPort {
+public interface InvitationNotificationPort {
 
     void sendGroupInvitations(ArrayList<String> emails);
 

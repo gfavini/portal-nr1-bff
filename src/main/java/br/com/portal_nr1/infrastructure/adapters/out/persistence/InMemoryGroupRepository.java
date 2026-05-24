@@ -36,5 +36,10 @@ public class InMemoryGroupRepository implements GroupRepositoyPort {
     public void deleteById(String groupId) {
         groups.remove(groupId);
     }
+
+    @Override
+    public void addDepartment(String id, String department) {
+        groups.get(id).getDepartments().add(department);
+    }
     
 }

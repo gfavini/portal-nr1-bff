@@ -20,8 +20,13 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import br.com.portal_nr1.application.exception.GroupAlreadyExistsException;
+import br.com.portal_nr1.application.exception.GroupExepiredException;
 import br.com.portal_nr1.application.exception.GroupNotFoundException;
 import br.com.portal_nr1.application.exception.QuestionnaireNotFoundException;
+import br.com.portal_nr1.application.exception.RespondentEmailConflictException;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.RespondetResponseItem;
+import br.com.portal_nr1.infrastructure.adapters.in.web.error.RepondentProvisionErrorResponse.Conflict;
+import br.com.portal_nr1.infrastructure.adapters.in.web.mapper.RespondentMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
@@ -31,8 +36,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValid(
 			MethodArgumentNotValidException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		List<ApiErrorResponse.Violation> violations = ex.getBindingResult()
 				.getFieldErrors()
 				.stream()
@@ -45,8 +49,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(ConstraintViolationException.class)
 	public ResponseEntity<ApiErrorResponse> handleConstraintViolation(
 			ConstraintViolationException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		List<ApiErrorResponse.Violation> violations = ex.getConstraintViolations()
 				.stream()
 				.map(v -> new ApiErrorResponse.Violation(v.getPropertyPath().toString(), v.getMessage()))
@@ -67,8 +70,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
 	public ResponseEntity<ApiErrorResponse> handleMethodNotSupported(
 			HttpRequestMethodNotSupportedException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		return build(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage(), request, List.of());
 	}
 
@@ -80,27 +82,47 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(QuestionnaireNotFoundException.class)
 	public ResponseEntity<ApiErrorResponse> handleQuestionnaireNotFound(
 			QuestionnaireNotFoundException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
 	}
 
 	@ExceptionHandler(GroupAlreadyExistsException.class)
 	public ResponseEntity<ApiErrorResponse> handleGroupAlreadyExists(
 			GroupAlreadyExistsException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
 	}
 
 	@ExceptionHandler(GroupNotFoundException.class)
-	public ResponseEntity<ApiErrorResponse> handleGroupNotFound( 
+	public ResponseEntity<ApiErrorResponse> handleGroupNotFound(
 			GroupNotFoundException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
 	}
 
+	@ExceptionHandler(GroupExepiredException.class)
+	public ResponseEntity<ApiErrorResponse> handleGroupExpired(
+			GroupExepiredException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+	}
+
+	@ExceptionHandler(RespondentEmailConflictException.class)
+	public ResponseEntity<RepondentProvisionErrorResponse> handleRespondentEmailConflict(
+			RespondentEmailConflictException ex,
+			HttpServletRequest request) {
+
+		RepondentProvisionErrorResponse body = new RepondentProvisionErrorResponse(
+				ex.getCode(),
+				ex.getMessage(),
+				new Conflict(
+						RespondentMapper.toResponse(ex.getRespondent(), RespondetResponseItem.class),
+						ex.getRespondent().getGroupId(),
+						ex.getRespondent().getGroupName()));
+
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+
+	}
 
 	@ExceptionHandler(AccessDeniedException.class)
 	public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
@@ -108,15 +130,15 @@ public class GlobalExceptionHandler {
 	}
 
 	@ExceptionHandler(AuthenticationException.class)
-	public ResponseEntity<ApiErrorResponse> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+	public ResponseEntity<ApiErrorResponse> handleAuthentication(AuthenticationException ex,
+			HttpServletRequest request) {
 		return build(HttpStatus.UNAUTHORIZED, "Unauthorized", request, List.of());
 	}
 
 	@ExceptionHandler(ResponseStatusException.class)
 	public ResponseEntity<ApiErrorResponse> handleResponseStatus(
 			ResponseStatusException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
 		if (status == null) {
 			status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -129,8 +151,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler({ ErrorResponseException.class })
 	public ResponseEntity<ApiErrorResponse> handleErrorResponseException(
 			ErrorResponseException ex,
-			HttpServletRequest request
-	) {
+			HttpServletRequest request) {
 		HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
 		if (status == null) {
 			status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -149,16 +170,14 @@ public class GlobalExceptionHandler {
 			HttpStatus status,
 			String message,
 			HttpServletRequest request,
-			List<ApiErrorResponse.Violation> violations
-	) {
+			List<ApiErrorResponse.Violation> violations) {
 		ApiErrorResponse body = new ApiErrorResponse(
 				Instant.now(),
 				status.value(),
 				status.getReasonPhrase(),
 				message,
 				request.getRequestURI(),
-				violations
-		);
+				violations);
 
 		return ResponseEntity.status(status).body(body);
 	}

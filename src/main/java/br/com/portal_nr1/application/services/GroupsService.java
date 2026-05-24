@@ -3,17 +3,21 @@ package br.com.portal_nr1.application.services;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
 import br.com.portal_nr1.application.exception.GroupAlreadyExistsException;
 import br.com.portal_nr1.application.exception.GroupClosedException;
+import br.com.portal_nr1.application.exception.GroupExepiredException;
 import br.com.portal_nr1.application.exception.GroupNotFoundException;
 import br.com.portal_nr1.application.exception.QuestionnaireNotFoundException;
 import br.com.portal_nr1.application.ports.in.CloseGroupUseCase;
 import br.com.portal_nr1.application.ports.in.DeleteGroupUseCase;
 import br.com.portal_nr1.application.ports.in.FetchGroupsUseCase;
 import br.com.portal_nr1.application.ports.in.ProvisionGroupUseCase;
+import br.com.portal_nr1.application.ports.in.ReopenGroupUseCase;
 import br.com.portal_nr1.application.ports.in.UpdateGroupUseCase;
 import br.com.portal_nr1.application.ports.out.GroupRepositoyPort;
 import br.com.portal_nr1.application.ports.out.QuestionnaireRespositoryPort;
@@ -32,7 +36,8 @@ public class GroupsService implements FetchGroupsUseCase,
         ProvisionGroupUseCase,
         UpdateGroupUseCase,
         DeleteGroupUseCase,
-        CloseGroupUseCase {
+        CloseGroupUseCase,
+        ReopenGroupUseCase {
 
     private final GroupRepositoyPort groupsRepositoy;
     private final QuestionnaireRespositoryPort questionnaireRepository;
@@ -87,7 +92,7 @@ public class GroupsService implements FetchGroupsUseCase,
                 provisionedGroupId,
                 group.getName(),
                 0,
-                new ArrayList<String>(),
+                new HashSet<String>(),
                 assignedQuestionnaireId,
                 assignedQuestionnaireVersion,
                 status,
@@ -167,10 +172,32 @@ public class GroupsService implements FetchGroupsUseCase,
             throw new GroupNotFoundException("Group not found with id: " + groupId);
         }
 
+        if (toUpdate.getStatus() == GroupStatus.EXPIRED || toUpdate.getExpiresAt().isBefore(Instant.now())) {
+            throw new GroupExepiredException("Group already expired with ID: " + groupId);
+        }
+
         toUpdate.setStatus(GroupStatus.CLOSED);
         Group updated = groupsRepositoy.save(toUpdate);
 
         return updated;
+    }
+
+    @Override
+    public Group reopen(String groupId) {
+        Group group = groupsRepositoy.findById(groupId);
+
+        if (group == null) {
+            throw new GroupNotFoundException("Group not found with id " + groupId);
+        }
+
+        if (group.getStatus() == GroupStatus.EXPIRED || group.getExpiresAt().isBefore(Instant.now())) {
+            throw new GroupExepiredException("Group already expired with ID: " + groupId);
+        }
+
+        group.setStatus(GroupStatus.OPEN);
+        Group groupUpdated = groupsRepositoy.save(group);
+
+        return groupUpdated;
     }
 
 }
