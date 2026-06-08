@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -43,10 +46,11 @@ public class SecurityConfig {
 	@Value("${app.frontend.logout-redirect:http://localhost:4200/login}")
 	String logoutRedirect;
 
-	@Value("${app.frontend.login-redirect:http://localhost:4200/}") 
+	@Value("${app.frontend.login-redirect:http://localhost:4200/}")
 	String loginRedirect;
 
 	@Bean
+	@Order(2)
 	SecurityFilterChain securityFilterChain(HttpSecurity http,
 			ClientRegistrationRepository clientRegistrationRepository,
 			OAuth2AuthorizedClientRepository authorizedClientRepository) throws Exception {
@@ -60,19 +64,24 @@ public class SecurityConfig {
 								"/v3/api-docs/**",
 								"/swagger-ui/**",
 								"/swagger-ui.html",
-								"/actuator/health")
+								"/actuator/health",
+								"/login",
+								"/error")
 						.permitAll()
-						.requestMatchers("/api/admin/**").hasRole("ADMIN")
+						.requestMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
 						.requestMatchers("/api/respondent/**").hasRole("RESPONDENT")
 						.requestMatchers("/api/**").authenticated()
 						.anyRequest().permitAll())
+				.formLogin(form -> form
+                        .loginPage("/login")
+                        .permitAll())
 				.oauth2Login(oauth -> oauth
 						.authorizationEndpoint(endpoint -> endpoint
 								.baseUri(
 										OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI))
-					.loginPage("/oauth2/authorization/questionnaire-bff")
+						.loginPage("/oauth2/authorization/questionnaire-bff")
 						.successHandler(oauth2SuccessHandler())
-						.userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(keycloakAuthoritiesMapper())))
+						.userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(rolesAuthoritiesMapper())))
 				.oauth2Client(Customizer.withDefaults())
 				.oauth2ResourceServer(
 						oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
@@ -94,6 +103,11 @@ public class SecurityConfig {
 	}
 
 	@Bean
+	PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	@Bean
 	SavedRequestAwareAuthenticationSuccessHandler oauth2SuccessHandler() {
 		SavedRequestAwareAuthenticationSuccessHandler handler = new SavedRequestAwareAuthenticationSuccessHandler();
 		handler.setDefaultTargetUrl(loginRedirect);
@@ -106,22 +120,20 @@ public class SecurityConfig {
 		JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 		converter.setJwtGrantedAuthoritiesConverter(jwt -> {
 			Set<GrantedAuthority> auths = new HashSet<>();
-			Object realmAccess = jwt.getClaim("realm_access");
-			if (realmAccess instanceof Map<?, ?> realm) {
-				Object roles = realm.get("roles");
-				if (roles instanceof Collection<?> roleList) {
+			Object rolesClaim = jwt.getClaim("roles");
+			if (rolesClaim instanceof Collection<?> roleList) {
+				for (Object role : roleList) {
+					if (role instanceof String r) {
+						auths.add(new SimpleGrantedAuthority("ROLE_" + r.toUpperCase()));
+					}
+				}
+			} else if (rolesClaim instanceof Map<?, ?> realm) {
+				Object nestedRoles = realm.get("roles");
+				if (nestedRoles instanceof Collection<?> roleList) {
 					for (Object role : roleList) {
 						if (role instanceof String r) {
 							auths.add(new SimpleGrantedAuthority("ROLE_" + r.toUpperCase()));
 						}
-					}
-				}
-			}
-			Object groups = jwt.getClaim("groups");
-			if (groups instanceof Collection<?> groupList) {
-				for (Object group : groupList) {
-					if (group instanceof String g) {
-						auths.add(new SimpleGrantedAuthority("GROUP_" + g));
 					}
 				}
 			}
@@ -131,47 +143,27 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	GrantedAuthoritiesMapper keycloakAuthoritiesMapper() {
+	GrantedAuthoritiesMapper rolesAuthoritiesMapper() {
 		return authorities -> {
 			Set<GrantedAuthority> mapped = new HashSet<>();
 			for (GrantedAuthority authority : authorities) {
-				if (authority instanceof OidcUserAuthority oidc) {
-					var claims = oidc.getUserInfo().getClaims();
-					mapped.addAll(extractRoles(claims));
-					mapped.addAll(extractGroups(claims));
+				if(authority instanceof OidcUserAuthority oidc){
+					mapped.addAll(extractRoles(oidc.getUserInfo().getClaims()));
 				} else if (authority instanceof OAuth2UserAuthority oauth) {
 					mapped.addAll(extractRoles(oauth.getAttributes()));
-					mapped.addAll(extractGroups(oauth.getAttributes()));
 				}
-			}
+			} 
 			return mapped;
 		};
 	}
 
 	private Collection<GrantedAuthority> extractRoles(Map<String, Object> claims) {
-		Object realmAccess = claims.get("realm_access");
-		if (realmAccess instanceof Map<?, ?> realm) {
-			Object roles = realm.get("roles");
-			if (roles instanceof Collection<?> roleList) {
-				Set<GrantedAuthority> collected = new HashSet<>();
-				for (Object role : roleList) {
-					if (role instanceof String r) {
-						collected.add(new SimpleGrantedAuthority("ROLE_" + r.toUpperCase()));
-					}
-				}
-				return collected;
-			}
-		}
-		return Set.of();
-	}
-
-	private Collection<GrantedAuthority> extractGroups(Map<String, Object> claims) {
-		Object groups = claims.get("groups");
-		if (groups instanceof Collection<?> groupList) {
+		Object roles = claims.get("roles");
+		if(roles instanceof Collection<?> roleList) {
 			Set<GrantedAuthority> collected = new HashSet<>();
-			for (Object group : groupList) {
-				if (group instanceof String g) {
-					collected.add(new SimpleGrantedAuthority("GROUP_" + g));
+			for(Object role : roleList) {
+				if(role instanceof String r) {
+					collected.add(new SimpleGrantedAuthority("ROLE_" + r));
 				}
 			}
 			return collected;

@@ -1,9 +1,10 @@
 package br.com.portal_nr1.domain.model;
 
-import java.util.ArrayList;
+
+import java.util.List;
 
 public record Groups(
-    ArrayList<Group> groups
+    List<Group> groups
 ) {
 
 }

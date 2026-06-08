@@ -4,15 +4,16 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import br.com.portal_nr1.domain.model.Group;
+import br.com.portal_nr1.domain.model.GroupEntity;
 import br.com.portal_nr1.domain.model.Groups;
-import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupUpdatedResponse;
-import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupReopenedReponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupClosedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupCreatedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupDeletedResponse;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupReopenedReponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupRequestItem;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupResponseItem;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupStatusResponse;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupUpdatedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupsResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.InviteScopeResponse;
 
@@ -89,22 +90,17 @@ public final class GroupsMapper {
 
     }
 
-    public static Group toDomain(GroupRequestItem request) {
+    public static GroupEntity toDomain(GroupRequestItem request) {
         if (request == null) {
             return null;
         }
 
-        return new Group(
-                null,
-                request.name(),
-                null,
-                null,
-                request.assignedQuestionnaireId(),
-                request.assignedQuestionnaireVersion(),
-                null,
-                request.expiresAt(),
-                null,
-                null);
+        return GroupEntity.builder()
+            .name(request.name())
+            .assignedQuestionnaireId(request.assignedQuestionnaireId())
+            .assignedQuestionnaireVersion(request.assignedQuestionnaireVersion())
+            .expiresAt(request.expiresAt())
+            .build();
     }
 
     public static GroupReopenedReponse toReopenedGroupResponse(Group responseItem) {
@@ -112,6 +108,23 @@ public final class GroupsMapper {
             toItem(responseItem)
         );
 
+    }
+
+    public static Group fromEntity(GroupEntity entity, Integer respondentCount) {
+        return new Group(
+            entity.getId(),
+            entity.getName(),
+            respondentCount,
+            entity.getDepartments(),
+            entity.getAssignedQuestionnaireId(),
+            entity.getAssignedQuestionnaireVersion(),
+            entity.getStatus(),
+            entity.getExpiresAt(),
+            entity.getLastInviteSentAt(),
+            entity.getLastInviteScope(),
+            entity.getCreatedAt(),
+            entity.getUpdatedAt()
+        );
     }
 
 }

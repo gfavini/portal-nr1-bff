@@ -18,13 +18,15 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import br.com.portal_nr1.application.exception.GroupAlreadyExistsException;
 import br.com.portal_nr1.application.exception.GroupExepiredException;
 import br.com.portal_nr1.application.exception.GroupNotFoundException;
 import br.com.portal_nr1.application.exception.QuestionnaireNotFoundException;
 import br.com.portal_nr1.application.exception.RespondentEmailConflictException;
-import br.com.portal_nr1.infrastructure.adapters.in.web.dto.RespondetResponseItem;
+import br.com.portal_nr1.application.exception.RespondentNotFoundException;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.RespondentResponseItem;
 import br.com.portal_nr1.infrastructure.adapters.in.web.error.RepondentProvisionErrorResponse.Conflict;
 import br.com.portal_nr1.infrastructure.adapters.in.web.mapper.RespondentMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -79,6 +81,11 @@ public class GlobalExceptionHandler {
 		return build(HttpStatus.NOT_FOUND, "Resource not found", request, List.of());
 	}
 
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+		return build(HttpStatus.NOT_FOUND, "Resource not found", request, List.of());
+	}
+
 	@ExceptionHandler(QuestionnaireNotFoundException.class)
 	public ResponseEntity<ApiErrorResponse> handleQuestionnaireNotFound(
 			QuestionnaireNotFoundException ex,
@@ -116,12 +123,19 @@ public class GlobalExceptionHandler {
 				ex.getCode(),
 				ex.getMessage(),
 				new Conflict(
-						RespondentMapper.toResponse(ex.getRespondent(), RespondetResponseItem.class),
-						ex.getRespondent().getGroupId(),
-						ex.getRespondent().getGroupName()));
+						RespondentMapper.toResponse(ex.getRespondent(), RespondentResponseItem.class),
+						ex.getRespondent().getGroup().getId(),
+						ex.getRespondent().getGroup().getName()));
 
 		return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
 
+	}
+
+	@ExceptionHandler(RespondentNotFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleRespondentNotFound(
+			RespondentNotFoundException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
 	}
 
 	@ExceptionHandler(AccessDeniedException.class)
@@ -163,6 +177,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
+		ex.printStackTrace();
 		return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", request, List.of());
 	}
 

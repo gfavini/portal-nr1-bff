@@ -1,6 +1,6 @@
 package br.com.portal_nr1.infrastructure.adapters.in.web.error;
 
-import br.com.portal_nr1.infrastructure.adapters.in.web.dto.RespondetResponseItem;
+import br.com.portal_nr1.infrastructure.adapters.in.web.dto.RespondentResponseItem;
 
 public record RepondentProvisionErrorResponse(
         String code,
@@ -8,7 +8,7 @@ public record RepondentProvisionErrorResponse(
         Conflict conflict) {
             
     public record Conflict(
-            RespondetResponseItem respondent,
+            RespondentResponseItem respondent,
             String currentGroupId,
             String currentGroupName) {
     }

@@ -1,24 +1,14 @@
 services:
- keycloak:
-#   image: quay.io/keycloak/keycloak:26.5.3
-  build:
-      context: .
-      dockerfile: Dockerfile.keycloak
-  command: start-dev
-  environment:
-   KEYCLOAK_ADMIN: admin
-   KEYCLOAK_ADMIN_PASSWORD: admin
-   KC_HEALTH_ENABLED: 'true'
-   KC_METRICS_ENABLED: 'true'
-   KC_HOSTNAME: localhost
-   KC_HOSTNAME_PORT: 8081
-   KC_HTTP_ENABLED: 'true'
-  ports:
-   - "8081:8080"
-  healthcheck:
-   test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-   interval: 10s
-   timeout: 5s
-   retries: 5
-#   volumes:
-#     - ./.keycloak-data:/opt/keycloak/data
+    postgres:
+        image: postgres:16
+        environment:
+            POSTGRES_DB: portal_nr1
+            POSTGRES_USER: admin
+            POSTGRES_PASSWORD: admin
+        ports:
+            - "5432:5432"
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U portal -d portal_nr1"]
+            interval: 10s
+            timeout: 5s
+            retries: 5

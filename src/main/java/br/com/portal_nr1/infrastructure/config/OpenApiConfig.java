@@ -1,6 +1,5 @@
 package br.com.portal_nr1.infrastructure.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -28,13 +27,13 @@ import io.swagger.v3.oas.models.info.License;
 	in = SecuritySchemeIn.HEADER,
 	flows = @OAuthFlows(
 		authorizationCode = @OAuthFlow(
-			authorizationUrl = "${KEYCLOAK_AUTH_URL:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/auth}",
-			tokenUrl = "${KEYCLOAK_TOKEN_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/token}",
+			authorizationUrl = "http://localhost:8080/oauth2/authorize",
+			tokenUrl = "http://localhost:8080/oauth2/token",
 			scopes = {
 				@OAuthScope(name = "openid", description = "OpenID scope"),
 				@OAuthScope(name = "profile", description = "Profile scope"),
 				@OAuthScope(name = "email", description = "Email scope"),
-				@OAuthScope(name = "roles", description = "Realm roles"),
+				@OAuthScope(name = "roles", description = "User Roles"),
 				@OAuthScope(name = "offline_access", description = "Refresh tokens")
 			}
 		)
@@ -43,15 +42,15 @@ import io.swagger.v3.oas.models.info.License;
 public class OpenApiConfig {
 
 	@Bean
-	OpenAPI baseOpenAPI(@Value("${keycloak.auth-server-url:http://localhost:8081}") String authServerUrl) {
+	OpenAPI baseOpenAPI() {
 		return new OpenAPI()
 			.info(new io.swagger.v3.oas.models.info.Info()
 				.title("Portal NR1 API")
 				.version("v1")
 				.description("Backend for Frontend com OAuth2 Authorization Code")
 				.license(new License().name("Apache 2.0")))
-			.externalDocs(new ExternalDocumentation()
-				.description("Keycloak")
-				.url(authServerUrl));
+            .externalDocs(new ExternalDocumentation()
+                .description("Spring Authorization Server")
+                .url("http://localhost:8080/.well-known/openid-configuration"));
 	}
 }

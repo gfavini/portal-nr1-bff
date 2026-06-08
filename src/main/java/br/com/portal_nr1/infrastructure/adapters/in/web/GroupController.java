@@ -18,6 +18,7 @@ import br.com.portal_nr1.application.ports.in.ProvisionGroupUseCase;
 import br.com.portal_nr1.application.ports.in.ReopenGroupUseCase;
 import br.com.portal_nr1.application.ports.in.UpdateGroupUseCase;
 import br.com.portal_nr1.domain.model.Group;
+import br.com.portal_nr1.domain.model.GroupEntity;
 import br.com.portal_nr1.domain.model.Groups;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupClosedResponse;
 import br.com.portal_nr1.infrastructure.adapters.in.web.dto.GroupCreatedResponse;
@@ -53,7 +54,7 @@ public class GroupController {
     @PostMapping("/")
     @ResponseStatus(HttpStatus.CREATED)
     public GroupCreatedResponse createGroup(@Valid @RequestBody GroupRequestItem request) {
-        Group group = GroupsMapper.toDomain(request);
+        GroupEntity group = GroupsMapper.toDomain(request);
         //FIXME: Talvez seja anti-pdrão retornar um "primitivo"
         String provisionedGroup = saveGroupUseCase.create(group);
         return GroupsMapper.toResponse(provisionedGroup, GroupCreatedResponse.class);
@@ -61,7 +62,7 @@ public class GroupController {
 
     @PutMapping("/{id}")
     public GroupUpdatedResponse updateGroup(@PathVariable String id, @RequestBody GroupRequestItem request) {
-        Group group = GroupsMapper.toDomain(request);
+        GroupEntity group = GroupsMapper.toDomain(request);
         Group responseItem = updateGroupUseCase.update(id, group);
         return GroupsMapper.toUpdatedResponse(responseItem);
     }

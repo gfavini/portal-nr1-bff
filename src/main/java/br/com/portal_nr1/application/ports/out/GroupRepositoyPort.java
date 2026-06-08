@@ -1,12 +1,13 @@
 package br.com.portal_nr1.application.ports.out;
 
-import br.com.portal_nr1.domain.model.Group;
-import br.com.portal_nr1.domain.model.Groups;
+import java.util.List;
+
+import br.com.portal_nr1.domain.model.GroupEntity;
 
 public interface GroupRepositoyPort {
-    Groups fetchAll();
-    Group save(Group group);
-    Group findById(String id);
+    List<GroupEntity>  fetchAll();
+    GroupEntity save(GroupEntity group);
+    GroupEntity findById(String id);
     void deleteById(String groupId);
     void addDepartment(String id, String department);
 }

@@ -27,13 +27,15 @@ public class AuthenticatedUserResolver {
 			return List.of();
 		}
 
-		return authentication.getAuthorities().stream()
+		List<String> roles = authentication.getAuthorities().stream()
 				.map(GrantedAuthority::getAuthority)
 				.filter(authority -> authority != null && authority.startsWith(prefix))
 				.map(authority -> authority.substring(prefix.length()))
 				.distinct()
 				.sorted()
 				.toList();
+
+		return roles;
 	}
 
 	private static String resolveEmail(Principal principal, Authentication authentication) {

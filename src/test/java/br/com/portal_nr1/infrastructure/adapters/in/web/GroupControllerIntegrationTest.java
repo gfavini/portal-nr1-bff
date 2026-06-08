@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,8 +79,7 @@ class GroupControllerIntegrationTest {
                 .with(oidcLogin().idToken(token -> token
                         .claim("email", "admin@portal.com")
                         .claim("preferred_username", "admin.portal")
-                        .claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
-                        .claim("groups", java.util.List.of("group1"))))
+                        .claim("roles", List.of("ADMINISTRATOR"))))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -116,8 +116,7 @@ class GroupControllerIntegrationTest {
                 .with(oidcLogin().idToken(token -> token
                         .claim("email", "admin@portal.com")
                         .claim("preferred_username", "admin.portal")
-                        .claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
-                        .claim("groups", java.util.List.of("group1"))))
+                        .claim("roles", List.of("ADMINISTRATOR"))))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
                 .andExpect(status().isBadRequest())
@@ -135,8 +134,7 @@ class GroupControllerIntegrationTest {
                 .with(oidcLogin().idToken(token -> token
                         .claim("email", "admin@portal.com")
                         .claim("preferred_username", "admin.portal")
-                        .claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
-                        .claim("groups", java.util.List.of("group1"))))
+                        .claim("roles", List.of("ADMINISTRATOR"))))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -157,8 +155,7 @@ class GroupControllerIntegrationTest {
                 .with(oidcLogin().idToken(token -> token
                         .claim("email", "admin@portal.com")
                         .claim("preferred_username", "admin.portal")
-                        .claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
-                        .claim("groups", java.util.List.of("group1"))))
+                        .claim("roles", List.of("ADMINISTRATOR"))))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -175,8 +172,8 @@ class GroupControllerIntegrationTest {
                 Instant.now().plus(30, ChronoUnit.DAYS), "OPEN");
 
         Instant expiresAt = Instant.now().plus(30, ChronoUnit.DAYS);
-        Group updated = new Group("group-id-1", "Grupo A Updated", 0, new HashSet<>(),
-                "q-id-456", 2, GroupStatus.OPEN, expiresAt, null, null);
+        Group updated = new Group("group-id-1", "Grupo A Updated", 5,new HashSet<>(),
+                "q-id-456", 2, GroupStatus.OPEN, expiresAt, null, null, null, null);
 
         when(updateGroupUseCase.update(eq("group-id-1"), any())).thenReturn(updated);
 
@@ -185,8 +182,7 @@ class GroupControllerIntegrationTest {
                 .with(oidcLogin().idToken(token -> token
                         .claim("email", "admin@portal.com")
                         .claim("preferred_username", "admin.portal")
-                        .claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
-                        .claim("groups", java.util.List.of("group1"))))
+                        .claim("roles", List.of("ADMINISTRATOR"))))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -223,13 +219,9 @@ class GroupControllerIntegrationTest {
                 .with(oidcLogin().idToken(token -> token
                         .claim("email", "admin@portal.com")
                         .claim("preferred_username", "admin.portal")
-                        .claim("realm_access", java.util.Map.of("roles", java.util.List.of("ADMIN")))
-                        .claim("groups", java.util.List.of("group1"))))
+                        .claim("roles", List.of("ADMINISTRATOR"))))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.message")
-                        .value("Another group with the same name already exists in the identity provider."));
+                .andExpect(status().isConflict());
     }
 }

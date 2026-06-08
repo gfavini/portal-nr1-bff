@@ -6,22 +6,39 @@ spring:
       client:
         registration:
           questionnaire-bff:
-            provider: keycloak
-            client-id: ${KEYCLOAK_CLIENT_ID:questionnaire-bff}
-            client-secret: ${KEYCLOAK_CLIENT_SECRET:WbE7wve89hx4JvKsoeey8jHoIstPxngX}
+            provider: spring
+            client-id: questionnaire-bff
+            client-secret: bff-secret
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope: openid,profile,email,roles,offline_access
+            scope: openid,profile,email,roles
         provider:
-          keycloak:
-            issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/questionnaire-platform}
-            authorization-uri: ${KEYCLOAK_AUTH_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/auth}
-            token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/token}
-            jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/certs}
-            user-info-uri: ${KEYCLOAK_USERINFO_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/userinfo}
+          spring:
+            authorization-uri: http://localhost:8080/oauth2/authorize
+            token-uri: http://localhost:8080/oauth2/token
+            jwk-set-uri: http://localhost:8080/oauth2/jwks
+            user-info-uri: http://localhost:8080/userinfo
+            user-name-attribute: sub
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/questionnaire-platform}
+          jwk-set-uri: http://localhost:8080/oauth2/jwks
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/portal_nr1
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
 
 
 server:
@@ -39,26 +56,12 @@ cors:
   allowed-headers: Authorization,Cache-Control,Content-Type,X-XSRF-TOKEN
   allow-credentials: true
 
-keycloak:
-  realm: questionnaire-platform
-  auth-server-url: http://localhost:8081
-  client-id: questionnaire-bff
-  logout-uri: ${KEYCLOAK_LOGOUT_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/logout}
-  token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8081/realms/questionnaire-platform/protocol/openid-connect/token}
-  admin:
-    server-url: ${KEYCLOAK_ADMIN_SERVER_URL:http://localhost:8081}
-    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
-    password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
-    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
-    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:YV6SOenIYbrEwp5CAs6DxvDkqaGhQ2g5}
-  respondent:
-    role-name: ${KEYCLOAK_RESPONDENT_ROLE_NAME:RESPONDENT}
 
 springdoc:
   swagger-ui:
     oauth:
       client-id: ${KEYCLOAK_CLIENT_ID:questionnaire-bff}
-      client-secret: ${KEYCLOAK_CLIENT_SECRET:WbE7wve89hx4JvKsoeey8jHoIstPxngX}
+      client-secret: ${KEYCLOAK_CLIENT_SECRET:bff-secret}
       use-pkce-with-authorization-code-grant: true
     path: /swagger-ui.html
   api-docs:

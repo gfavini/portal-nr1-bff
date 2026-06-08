@@ -3,12 +3,12 @@ package br.com.portal_nr1.application.services;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import br.com.portal_nr1.application.exception.GroupAlreadyExistsException;
 import br.com.portal_nr1.application.exception.GroupClosedException;
 import br.com.portal_nr1.application.exception.GroupExepiredException;
 import br.com.portal_nr1.application.exception.GroupNotFoundException;
@@ -21,13 +21,13 @@ import br.com.portal_nr1.application.ports.in.ReopenGroupUseCase;
 import br.com.portal_nr1.application.ports.in.UpdateGroupUseCase;
 import br.com.portal_nr1.application.ports.out.GroupRepositoyPort;
 import br.com.portal_nr1.application.ports.out.QuestionnaireRespositoryPort;
-import br.com.portal_nr1.application.ports.out.UserIdentityProvisioningPort;
+import br.com.portal_nr1.application.ports.out.RespondentRepositoryPort;
 import br.com.portal_nr1.domain.model.Group;
+import br.com.portal_nr1.domain.model.GroupEntity;
 import br.com.portal_nr1.domain.model.GroupStatus;
 import br.com.portal_nr1.domain.model.Groups;
 import br.com.portal_nr1.domain.model.Questionnaire;
-import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakGroupNameConflictException;
-import br.com.portal_nr1.infrastructure.adapters.exception.KeycloakGroupNotFoundException;
+import br.com.portal_nr1.infrastructure.adapters.in.web.mapper.GroupsMapper;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -41,32 +41,31 @@ public class GroupsService implements FetchGroupsUseCase,
 
     private final GroupRepositoyPort groupsRepositoy;
     private final QuestionnaireRespositoryPort questionnaireRepository;
-    private final UserIdentityProvisioningPort userIdentityProvisioningPort;
+    private final RespondentRepositoryPort respondentRepository;
 
-    // TODO: No futuro as operações do grupo devem ser transacional, ou seja,
-    // se a operação do Dynamo falha deve reverter a operação do Keycloak, e vice
-    // versa.
     @Override
     public Groups fetch() {
-        Groups groups = groupsRepositoy.fetchAll();
+        List<GroupEntity> entities = groupsRepositoy.fetchAll();
+        List<Group> result = new ArrayList<>();
+
+        Map<String, Integer> respondendetCount = respondentRepository.countByGroupIds();
+
         // Verificar se algum grupo expirou e atualizar seu status
-        for (Group group : groups.groups()) {
-            if (group.getExpiresAt() != null && group.getExpiresAt().isBefore(Instant.now())) {
-                group.setStatus(GroupStatus.EXPIRED);
-                groupsRepositoy.save(group);
+        for (GroupEntity entity : entities) {
+            if (entity.getExpiresAt() != null && entity.getExpiresAt().isBefore(Instant.now())) {
+                entity.setStatus(GroupStatus.EXPIRED);
+                groupsRepositoy.save(entity);
             }
+
+            Integer count = Optional.ofNullable(respondendetCount.get(entity.getId())).orElse(0);
+            Group group = GroupsMapper.fromEntity(entity, count);
+            result.add(group);
         }
-        return groups;
+        return new Groups(result);
     }
 
     @Override
-    public String create(Group group) {
-        String provisionedGroupId = null;
-        try {
-            provisionedGroupId = userIdentityProvisioningPort.provisionGroup(group.getName());
-        } catch (KeycloakGroupNameConflictException e) {
-            throw new GroupAlreadyExistsException("Group already exists in the identity provider.");
-        }
+    public String create(GroupEntity group) {
 
         String assignedQuestionnaireId = group.getAssignedQuestionnaireId();
         Integer assignedQuestionnaireVersion = group.getAssignedQuestionnaireVersion();
@@ -88,25 +87,21 @@ public class GroupsService implements FetchGroupsUseCase,
                 ? group.getStatus()
                 : GroupStatus.OPEN;
 
-        Group groupToSave = new Group(
-                provisionedGroupId,
-                group.getName(),
-                0,
-                new HashSet<String>(),
-                assignedQuestionnaireId,
-                assignedQuestionnaireVersion,
-                status,
-                expiresAt,
-                null,
-                null);
+        GroupEntity groupToSave = GroupEntity.builder()
+                .name(group.getName())
+                .assignedQuestionnaireId(assignedQuestionnaireId)
+                .assignedQuestionnaireVersion(assignedQuestionnaireVersion)
+                .status(status)
+                .expiresAt(expiresAt)
+                .build();
 
-        groupsRepositoy.save(groupToSave);
-        return groupToSave.getId();
+        GroupEntity saved = groupsRepositoy.save(groupToSave);
+        return saved.getId();
     }
 
     @Override
-    public Group update(String id, Group group) {
-        Group existingGroup = groupsRepositoy.findById(id);
+    public Group update(String id, GroupEntity group) {
+        GroupEntity existingGroup = groupsRepositoy.findById(id);
 
         if (existingGroup == null) {
             throw new GroupNotFoundException("Group not found with id: " + id);
@@ -115,17 +110,8 @@ public class GroupsService implements FetchGroupsUseCase,
             throw new GroupClosedException("Cannot update a closed group.");
         }
 
-        if (!group.getName().equalsIgnoreCase(existingGroup.getName())) {
-            try {
-                userIdentityProvisioningPort.updateGroupName(existingGroup.getId(), group.getName());
-                existingGroup.setName(group.getName());
-
-                // FIXME: essa excessao deveria estar em qual camada? Estranho que nao deu erro
-                // nos testes de arquitetura
-            } catch (KeycloakGroupNameConflictException e) {
-                throw new GroupAlreadyExistsException(
-                        "Another group with the same name already exists in the identity provider.", e);
-            }
+        if (group.getName() != null && !group.getName().isBlank()) {
+            existingGroup.setName(group.getName());
         }
 
         if (group.getAssignedQuestionnaireId() != null && !group.getAssignedQuestionnaireId().isBlank()) {
@@ -140,24 +126,14 @@ public class GroupsService implements FetchGroupsUseCase,
             existingGroup.setExpiresAt(group.getExpiresAt());
         }
 
-        groupsRepositoy.save(existingGroup);
-        return existingGroup;
+        GroupEntity saved = groupsRepositoy.save(existingGroup);
+        int respondendetCount = respondentRepository.countByGroupId(saved.getId());
+
+        return GroupsMapper.fromEntity(saved, respondendetCount);
     }
 
     @Override
     public String delete(String groupId) {
-
-        Group existingGroup = groupsRepositoy.findById(groupId);
-
-        if (existingGroup == null) {
-            throw new GroupNotFoundException("Group not found with id: " + groupId);
-        }
-
-        try {
-            userIdentityProvisioningPort.deleteGroup(groupId);
-        } catch (KeycloakGroupNotFoundException ex) {
-            throw new GroupNotFoundException("Group not found with id: " + groupId);
-        }
 
         groupsRepositoy.deleteById(groupId);
         return groupId;
@@ -166,38 +142,48 @@ public class GroupsService implements FetchGroupsUseCase,
 
     @Override
     public Group close(String groupId) {
-        Group toUpdate = groupsRepositoy.findById(groupId);
+        GroupEntity toUpdate = groupsRepositoy.findById(groupId);
 
         if (toUpdate == null) {
             throw new GroupNotFoundException("Group not found with id: " + groupId);
         }
 
-        if (toUpdate.getStatus() == GroupStatus.EXPIRED || toUpdate.getExpiresAt().isBefore(Instant.now())) {
+        if (toUpdate.getStatus() == GroupStatus.EXPIRED) {
+            if(toUpdate.getExpiresAt().isBefore(Instant.now())) {
+                toUpdate.setStatus(GroupStatus.EXPIRED);
+                groupsRepositoy.save(toUpdate);
+            }
             throw new GroupExepiredException("Group already expired with ID: " + groupId);
         }
 
         toUpdate.setStatus(GroupStatus.CLOSED);
-        Group updated = groupsRepositoy.save(toUpdate);
+        GroupEntity updated = groupsRepositoy.save(toUpdate);
 
-        return updated;
+        int respondendetCount = respondentRepository.countByGroupId(updated.getId());
+        return GroupsMapper.fromEntity(updated, respondendetCount);
     }
 
     @Override
     public Group reopen(String groupId) {
-        Group group = groupsRepositoy.findById(groupId);
+        GroupEntity group = groupsRepositoy.findById(groupId);
 
         if (group == null) {
             throw new GroupNotFoundException("Group not found with id " + groupId);
         }
 
-        if (group.getStatus() == GroupStatus.EXPIRED || group.getExpiresAt().isBefore(Instant.now())) {
+        if (group.getStatus() == GroupStatus.EXPIRED) {
+            if(group.getExpiresAt().isBefore(Instant.now())) {
+                group.setStatus(GroupStatus.EXPIRED);
+                groupsRepositoy.save(group);
+            }
             throw new GroupExepiredException("Group already expired with ID: " + groupId);
         }
 
         group.setStatus(GroupStatus.OPEN);
-        Group groupUpdated = groupsRepositoy.save(group);
+        GroupEntity groupUpdated = groupsRepositoy.save(group);
 
-        return groupUpdated;
+        int respondendetCount = respondentRepository.countByGroupId(groupUpdated.getId());
+        return GroupsMapper.fromEntity(groupUpdated, respondendetCount);
     }
 
 }

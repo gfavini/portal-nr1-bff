@@ -1,6 +1,6 @@
 package br.com.portal_nr1.infrastructure.adapters.in.web.dto;
 
-public record RespondetResponseItem(
+public record RespondentResponseItem(
         String id,
         String firstName,
         String lastName,

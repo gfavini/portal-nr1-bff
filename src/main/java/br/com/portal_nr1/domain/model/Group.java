@@ -13,7 +13,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @Data
 public class Group {
+
     private String id;
+
     private String name;
     private Integer respondentCount;
     private Set<String> departments;
@@ -23,5 +25,6 @@ public class Group {
     private Instant expiresAt;
     private Instant lastInviteSentAt;
     private InviteScope lastInviteScope;
+    private Instant createdAt;
+    private Instant updatedAt;
 }
-

@@ -53,11 +53,4 @@ public class BffController {
 		return Map.of("status", "ok", "message", "RESPONDENT access granted");
 	}
 
-	// @PostMapping("/logout")
-	// @SecurityRequirement(name = "oauth2")
-	// @Operation(summary = "Logout da aplicação e Keycloak")
-	// public Map<String, String> logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-	// 	logoutService.logout(request, response, authentication);
-	// 	return Map.of("status", "ok", "message", "Logged out successfully");
-	// }
 }
