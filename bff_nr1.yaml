@@ -1,0 +1,733 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: BFF
+meta:
+  id: wrk_f9540167433148618ec85f90f3ca13d5
+  created: 1771643749522
+  modified: 1779029308093
+  description: ""
+collection:
+  - url: http://localhost:8080/login
+    name: New Request
+    meta:
+      id: req_59263bcf990e44e995fd8ae89803f009
+      created: 1780182921882
+      modified: 1780182944081
+      isPrivate: false
+      description: ""
+      sortKey: -1780182921882
+    method: POST
+    headers:
+      - name: User-Agent
+        value: insomnia/12.6.0
+        description: ""
+        disabled: false
+    settings:
+      renderRequestBody: true
+      encodeUrl: true
+      followRedirects: global
+      cookies:
+        send: true
+        store: true
+      rebuildPath: true
+  - name: portal
+    meta:
+      id: fld_957bd0a7a5264046b59fe57e276cfdd9
+      created: 1779040647362
+      modified: 1780883305336
+      sortKey: -1779040647362
+      description: ""
+    children:
+      - name: User
+        meta:
+          id: fld_bb0b8444f5644394b5a6414ddd4a90dc
+          created: 1779040156956
+          modified: 1779048025397
+          sortKey: -1779040656305
+          description: ""
+        children:
+          - url: http://localhost:8080/api/me
+            name: USER INFO
+            meta:
+              id: req_60659bb4caac4a5ba16ef96197bf2924
+              created: 1771643749532
+              modified: 1779048023076
+              isPrivate: false
+              description: >-
+                - Purpose: Fetch current authenticated user session; used on app
+                boot.
+
+                - Request: none
+
+                - Response: `{ user: { id, username, email, name?, roles:
+                ('ADMINISTRATOR'|'RESPONDENT')[] } }`
+
+                - Owner: BFF.
+              sortKey: -1779040158756
+            method: GET
+            body:
+              mimeType: application/json
+              text: ""
+            headers:
+              - name: Accept-Encoding
+                value: gzip, deflate, br, zstd
+              - name: Accept-Language
+                value: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7
+              - name: Cache-Control
+                value: no-cache
+              - name: Connection
+                value: keep-alive
+              - name: Cookie
+                value: JSESSIONID=3207AE154B05ED91490BFA452764CB68
+              - name: Pragma
+                value: no-cache
+              - name: Sec-Fetch-Dest
+                value: empty
+              - name: Sec-Fetch-Mode
+                value: cors
+              - name: Sec-Fetch-Site
+                value: same-site
+              - name: User-Agent
+                value: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like
+                  Gecko) Chrome/145.0.0.0 Safari/537.36
+              - name: sec-ch-ua
+                value: '"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"'
+              - name: sec-ch-ua-mobile
+                value: ?0
+              - name: sec-ch-ua-platform
+                value: '"Windows"'
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+      - name: Groups
+        meta:
+          id: fld_6b7420a1432e4e9890141bba9bad4046
+          created: 1779040168026
+          modified: 1780883298327
+          sortKey: -1779040656205
+          description: ""
+        children:
+          - url: "{{groups_endpoint}}/"
+            name: LISTA GRUPOS
+            meta:
+              id: req_824a43cba8c641279f22307e17c5b03f
+              created: 1779048105326
+              modified: 1779051816013
+              isPrivate: false
+              description: >-
+                - Purpose: List all groups with their assigned
+                questionnaire/version and derived respondent counts.
+
+                - Response: `{ groups: RespondentGroup[] }`
+                  - Each group includes `respondentCount: number` (atomic counter maintained by the BFF) and `departments: string[]` (distinct department values aggregated from member respondent profiles, maintained as a StringSet on the group's metadata item — updated on every respondent create/update/transfer). Neither `respondentIds` nor `respondentEmails` are returned; fetch `GET /api/respondents?groupId=<id>` when you need the full respondent list.
+                - Owner: BFF (derives `status='expired'` when `expiresAt` is in
+                the past).
+              sortKey: -1779048105326
+            method: GET
+            headers:
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            scripts:
+              afterResponse: >2
+                 insomnia.test('Check if status is 200', () => {
+                     insomnia.expect(insomnia.response.code).to.eql(200);
+                      
+                     if (insomnia.response.code){
+                       const jsonBody = insomnia.response.json();
+                       insomnia.environment.set("group_id", jsonBody.groups[0].id);
+                     }
+                 });
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: "{{groups_endpoint}}/"
+            name: CRIA GRUPO
+            meta:
+              id: req_8dd26f29082e441ca1333b079964df28
+              created: 1779048255294
+              modified: 1780679820542
+              isPrivate: false
+              description: >-
+                - Purpose: Create a group; optionally pre-assign a
+                questionnaire/version. Defaults to the latest questionnaire
+                version.
+
+                - Request:
+                  ```json
+                  {
+                    "name": "Equipe Alpha",
+                    "assignedQuestionnaireId": "qre_001",
+                    "assignedQuestionnaireVersion": 3,
+                    "expiresAt": "2026-06-30T23:59:59.000Z",
+                    "status": "open"
+                  }
+                  ```
+                  All fields except `name` are optional.
+                - Response: `{ groupId }`
+
+                - Owner: BFF (validates single questionnaire per group; enforces
+                future expiration).
+              sortKey: -1779048255294
+            method: POST
+            body:
+              mimeType: application/json
+              text: >-
+                {
+                  "name": "Porto3",
+                  "assignedQuestionnaireId": "{{ _.latest_questionnaire_id }}",
+                  "assignedQuestionnaireVersion": {{latest_questionnaire_version}},
+                  "expiresAt": "2026-06-23T19:21:00Z",
+                  "status": "open"
+                }
+            headers:
+              - name: Content-Type
+                value: application/json
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            scripts:
+              afterResponse: |2
+                 insomnia.test('Check if status is 201', () => {
+                     insomnia.expect(insomnia.response.code).to.eql(201);
+                      
+                     if (insomnia.response.code){
+                       const jsonBody = insomnia.response.json();
+                       insomnia.environment.set("group_id", jsonBody.id);
+                     }
+                 });
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: "{{groups_endpoint}}/:id"
+            name: ATUALIZA GRUPO
+            meta:
+              id: req_90dd7c4ebf39408eb89692817b1f9c54
+              created: 1779051663386
+              modified: 1779052898493
+              isPrivate: false
+              description: >
+                - Purpose: Update group metadata or questionnaire assignment.
+
+                - Request:
+                  ```json
+                  {
+                    "name": "Equipe Alpha Atualizada",
+                    "assignedQuestionnaireId": "qre_001",
+                    "assignedQuestionnaireVersion": 3,
+                    "expiresAt": "2026-12-31T23:59:59.000Z"
+                  }
+                  ```
+                - Response: `{ group: RespondentGroup }`
+
+                - Owner: BFF (blocks updates when group is `closed`; allows
+                expired groups to reopen when a future `expiresAt` is supplied).
+              sortKey: -1779051663386
+            method: PUT
+            body:
+              mimeType: application/json
+              text: >2-
+                  {
+                    "name": "Porto3",
+                    "assignedQuestionnaireId": "{{latest_questionnaire_id }}",
+                    "assignedQuestionnaireVersion": {{latest_questionnaire_version}},
+                    "expiresAt": "2026-12-31T23:59:59.000Z"
+                  }
+            headers:
+              - name: Content-Type
+                value: application/json
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+            pathParameters:
+              - name: id
+                value: "{{group_id}}"
+          - url: "{{groups_endpoint}}/:id"
+            name: DELETA GRUPO
+            meta:
+              id: req_fc83f0cf8c6143ac8c5c3090e7ba5162
+              created: 1779052935440
+              modified: 1779066206184
+              isPrivate: false
+              description: >-
+                - Purpose: Remove a group (only when business rules allow; e.g.,
+                no submitted responses).
+
+                - Response: `{ groupId }`
+
+                - Owner: BFF.
+              sortKey: -1779052935440
+            method: DELETE
+            headers:
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+            pathParameters:
+              - name: id
+                value: "{{group_id}}"
+          - url: "{{groups_endpoint}}/:id/close"
+            name: FECHA GRUPO
+            meta:
+              id: req_e2e67f4bbfb040219fe1605d8fddd2ab
+              created: 1779066133012
+              modified: 1779066208635
+              isPrivate: false
+              description: >-
+                **POST /api/groups/:groupId/close**
+
+                - Purpose: Mark a group as closed so it cannot be edited or
+                receive new responses.
+
+                - Request: empty
+
+                - Response: `{ group: RespondentGroup }`
+
+                - Owner: BFF.
+              sortKey: -1779052299413
+            method: POST
+            headers:
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+            pathParameters:
+              - name: id
+                value: "{{group_id}}"
+          - url: "{{groups_endpoint}}/:id/reopen"
+            name: REABRE GRUPO
+            meta:
+              id: req_9015eb2934c14ce8aaadf01427d6f134
+              created: 1779562288163
+              modified: 1779564905016
+              isPrivate: false
+              description: "**POST /api/groups/:groupId/reopen**
+
+                - Purpose: Reopen a closed group.
+
+                - Request: empty
+
+                - Response: `{ group: RespondentGroup }`
+
+                - Owner: BFF.
+
+                \t\t"
+              sortKey: -1779051981399.5
+            method: POST
+            headers:
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+            pathParameters:
+              - name: id
+                value: "{{group_id}}"
+      - name: Questionnaire
+        meta:
+          id: fld_093ff8d3542049eda9a5b9ad901c3c36
+          created: 1779040176792
+          modified: 1780681039976
+          sortKey: -1779040656105
+          description: ""
+        children:
+          - url: "{{questionnaire_endpoint}}/"
+            name: LISTA QUESTIONARIOS
+            meta:
+              id: req_b07b4b93064c408b80fa70c9f38c36bb
+              created: 1779040379910
+              modified: 1779052225530
+              isPrivate: false
+              description: >-
+                - Purpose: Return the canonical questionnaire history and
+                current version for admins and respondents.
+
+                - Response: `{ current: QuestionnaireVersion, versions:
+                QuestionnaireVersion[] }`
+
+                - Owner: BFF (applies role-based filtering if ever needed).
+              sortKey: -1779040379910
+            method: GET
+            headers:
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            scripts:
+              afterResponse: >2
+                 insomnia.test('Check if status is 200', () => {
+                     insomnia.expect(insomnia.response.code).to.eql(200);
+                      
+                     if (insomnia.response.code){
+                       const jsonBody = insomnia.response.json();
+                       insomnia.environment.set("latest_questionnaire_id", jsonBody.current.id);
+                			 insomnia.environment.set("latest_questionnaire_version", jsonBody.current.version);
+                     }
+                 });
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: "{{questionnaire_endpoint}}/versions"
+            name: REGISTRA VERSAO
+            meta:
+              id: req_a14c3f670c3740b48643709a3e07cda0
+              created: 1779041201736
+              modified: 1780681205317
+              isPrivate: false
+              description: >-
+                - Purpose: Publish a new questionnaire version.
+
+                - Request: `{ title?, description?, questions:
+                QuestionnaireQuestion[] }`
+
+                - Response: `{ questionnaire: QuestionnaireVersion }`
+
+                - Owner: BFF (enforces versioning rules; no in-place edits).
+              sortKey: -1779041201736
+            method: POST
+            body:
+              mimeType: application/json
+              text: >-
+                {
+                  "title": "Questionario NR1 2026",
+                  "description": "Versao atualizada para auditoria anual.",
+                  "questions": [
+                    {
+                      "id": "q-01",
+                      "affirmation": "A empresa possui programa formal de capacitacao?",
+                      "pillar": "Governanca",
+                      "subPillar": "Treinamento",
+                      "required": true
+                    }
+                  ]
+                }
+            headers:
+              - name: Content-Type
+                value: application/json
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            scripts:
+              afterResponse: >2
+                 insomnia.test('Check if status is 201', () => {
+                     insomnia.expect(insomnia.response.code).to.eql(201);
+                      
+                     if (insomnia.response.code){
+                       const jsonBody = insomnia.response.json();
+                       insomnia.environment.set("latest_questionnaire_id", jsonBody.id);
+                			 insomnia.environment.set("latest_questionnaire_version", jsonBody.version);
+                     }
+                 });
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: "{{questionnaire_endpoint}}/:version"
+            name: BUSCA VERSAO
+            meta:
+              id: req_ea688c659cfa431b8dd90313dff0f121
+              created: 1779043721565
+              modified: 1779048194298
+              isPrivate: false
+              description: >-
+                - Purpose: Fetch a specific questionnaire version (admin
+                comparison/reassignment flows).
+
+                - Response: `QuestionnaireVersion`
+
+                - Owner: BFF.
+              sortKey: -1779040379810
+            method: GET
+            headers:
+              - name: User-Agent
+                value: insomnia/12.5.0
+                description: ""
+                disabled: false
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+            pathParameters:
+              - name: version
+                value: "1"
+      - name: Respondente
+        meta:
+          id: fld_e6b3b157544f4034951e31446da0303c
+          created: 1780681150118
+          modified: 1780883305336
+          sortKey: -1779040656405
+          description: ""
+        children:
+          - url: "{{respondent_endpoint}}/"
+            name: CRIA RESPONDENTE
+            meta:
+              id: req_1f6ae3654f3d42569ee366718de2a2d8
+              created: 1780681160817
+              modified: 1780771227144
+              isPrivate: false
+              description: ""
+              sortKey: -1780681160817
+            method: POST
+            body:
+              mimeType: application/json
+              text: |-
+                {
+                	  "firstName" : "Roberta",
+                    "lastName": "Favini",
+                    "email": "gfavini2@gmail.com",
+                    "age": 34,
+                    "department": "RH",
+                    "gender": "masculino",
+                    "groupId": "{{group_id}}"
+                }
+            headers:
+              - name: Content-Type
+                value: application/json
+              - name: User-Agent
+                value: insomnia/12.6.0
+                description: ""
+                disabled: false
+            scripts:
+              afterResponse: >2
+                 insomnia.test('Check if status is 201', () => {
+                     insomnia.expect(insomnia.response.code).to.eql(201);
+                      
+                     if (insomnia.response.code){
+                       const jsonBody = insomnia.response.json();
+                       insomnia.environment.set("respondent_id", jsonBody.id);
+                			 insomnia.environment.set("respondent_firstName", jsonBody.firstName);
+                			 insomnia.environment.set("respondent_lastName", jsonBody.lastName);
+                			 insomnia.environment.set("respondent_groupId", jsonBody.groupId);
+                			 insomnia.environment.set("respondent_department", jsonBody.department);
+                			 
+                     }
+                 });
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: "{{respondent_endpoint}}"
+            name: BUSCA RESPONDENTE
+            meta:
+              id: req_c692d66ffc784a67be7bd5da8c35ca40
+              created: 1780684659454
+              modified: 1780687933916
+              isPrivate: false
+              description: ""
+              sortKey: -1780432041349.5
+            method: GET
+            parameters:
+              - name: groupId
+                value: "{{ _.respondent_groupId }}"
+                description: ""
+                disabled: false
+              - name: firstName
+                value: ""
+                description: ""
+                disabled: true
+              - name: lastName
+                value: Favini
+                description: ""
+                disabled: true
+              - name: department
+                value: RH
+                description: ""
+                disabled: false
+            headers:
+              - name: User-Agent
+                value: insomnia/12.6.0
+                description: ""
+                disabled: false
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: "{{respondent_endpoint}}/:id"
+            name: ATUALIZA RESPONDENTE
+            meta:
+              id: req_f6e58ddfb19e4d87807cc626f7342633
+              created: 1780771079995
+              modified: 1780771398160
+              isPrivate: false
+              description: ""
+              sortKey: -1780556601083.25
+            method: PUT
+            body:
+              mimeType: application/json
+              text: |-
+                {
+                	  "firstName" : "João",
+                    "lastName": "Favini",
+                    "email": "gfavini@gmail.com",
+                    "age": 34,
+                    "department": "RH",
+                    "gender": "masculino",
+                    "groupId": "{{group_id}}"
+                }
+            headers:
+              - name: Content-Type
+                value: application/json
+              - name: User-Agent
+                value: insomnia/12.6.0
+                description: ""
+                disabled: false
+            scripts:
+              afterResponse: >2
+                 insomnia.test('Check if status is 201', () => {
+                     insomnia.expect(insomnia.response.code).to.eql(201);
+                      
+                     if (insomnia.response.code){
+                       const jsonBody = insomnia.response.json();
+                       insomnia.environment.set("respondent_id", jsonBody.id);
+                			 insomnia.environment.set("respondent_firstName", jsonBody.firstName);
+                			 insomnia.environment.set("respondent_lastName", jsonBody.lastName);
+                			 insomnia.environment.set("respondent_groupId", jsonBody.groupId);
+                			 insomnia.environment.set("respondent_department", jsonBody.department);
+                			 
+                     }
+                 });
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+            pathParameters:
+              - name: id
+                value: "{{ _.respondent_id }}"
+    authentication:
+      type: oauth2
+      disabled: false
+      grantType: authorization_code
+      accessTokenUrl: http://localhost:8080/oauth2/token
+      authorizationUrl: http://localhost:8080/oauth2/authorize
+      clientId: questionnaire-bff
+      clientSecret: bff-secret
+      redirectUrl: https://app.insomnia.rest/oauth/redirect
+      useDefaultBrowser: true
+      credentialsInBody: false
+      usePkce: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_fec6758d24ff13aa48e9b359f4cb2ba49baf7aad
+    created: 1771643749527
+    modified: 1780883305329
+  cookies:
+    - id: 1d1e35ef-8882-46c0-9e60-d6636be57fbe
+      key: XSRF-TOKEN
+      value: ""
+      domain: localhost
+      path: /
+      secure: false
+      httpOnly: false
+      hostOnly: true
+    - id: 40b2f560-bb53-4849-8a9c-a6a8222776db
+      key: JSESSIONID
+      value: 664B1AD90709FCB1606C98BD4C133042
+      domain: localhost
+      path: /
+      secure: false
+      httpOnly: true
+      hostOnly: true
+environments:
+  name: Base Environment
+  meta:
+    id: env_fec6758d24ff13aa48e9b359f4cb2ba49baf7aad
+    created: 1771643749525
+    modified: 1780883305334
+    isPrivate: false
+  subEnvironments:
+    - name: Local
+      meta:
+        id: env_3012cbad0cc44322ab35cf0ca23d1de3
+        created: 1779040310274
+        modified: 1780883305330
+        isPrivate: false
+        sortKey: 1779040310274
+      data:
+        base_url: http://localhost:8080
+        questionnaire_endpoint: "{{base_url}}/api/questionnaires"
+        groups_endpoint: "{{base_url}}/api/groups"
+        latest_questionnaire_id: 014ccb0a-1eda-4fb2-af01-81269a4070c3
+        latest_questionnaire_version: "1"
+        group_id: a98771e2-6f8e-4d82-af38-e7db33ce4534
+        respondent_endpoint: "{{base_url}}/api/respondents"
+        respondent_id: ca0852e5-cdaa-4456-bc39-fcc32ba74b40
+        respondent_firstName: Roberta
+        respondent_lastName: Favini
+        respondent_groupId: a98771e2-6f8e-4d82-af38-e7db33ce4534
+        respondent_department: RH
