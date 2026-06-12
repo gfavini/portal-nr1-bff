@@ -32,6 +32,7 @@ public class BffController {
 		log.info("Authentication class: {}", authentication.getClass().getName());
 		AuthenticatedUser info = authenticatedUserResolver.resolve(principal, authentication);
 		return Map.of("user", Map.of(
+			"id", info.id(),
 			"username", info.username(),
 			"email", info.email(),
 			"roles", info.roles(),

@@ -148,7 +148,11 @@ public class SecurityConfig {
 			Set<GrantedAuthority> mapped = new HashSet<>();
 			for (GrantedAuthority authority : authorities) {
 				if(authority instanceof OidcUserAuthority oidc){
-					mapped.addAll(extractRoles(oidc.getUserInfo().getClaims()));
+					// prefer ID token claims — custom claims (roles/groups) are added there by tokenCustomizer
+					Map<String, Object> claims = oidc.getIdToken() != null
+							? oidc.getIdToken().getClaims()
+							: (oidc.getUserInfo() != null ? oidc.getUserInfo().getClaims() : Map.of());
+					mapped.addAll(extractRoles(claims));
 				} else if (authority instanceof OAuth2UserAuthority oauth) {
 					mapped.addAll(extractRoles(oauth.getAttributes()));
 				}
@@ -158,17 +162,24 @@ public class SecurityConfig {
 	}
 
 	private Collection<GrantedAuthority> extractRoles(Map<String, Object> claims) {
+		Set<GrantedAuthority> collected = new HashSet<>();
 		Object roles = claims.get("roles");
-		if(roles instanceof Collection<?> roleList) {
-			Set<GrantedAuthority> collected = new HashSet<>();
-			for(Object role : roleList) {
-				if(role instanceof String r) {
+		if (roles instanceof Collection<?> roleList) {
+			for (Object role : roleList) {
+				if (role instanceof String r) {
 					collected.add(new SimpleGrantedAuthority("ROLE_" + r));
 				}
 			}
-			return collected;
 		}
-		return Set.of();
+		Object groups = claims.get("groups");
+		if (groups instanceof Collection<?> groupList) {
+			for (Object group : groupList) {
+				if (group instanceof String g) {
+					collected.add(new SimpleGrantedAuthority("GROUP_" + g));
+				}
+			}
+		}
+		return collected;
 	}
 
 	@Bean

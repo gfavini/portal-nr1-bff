@@ -21,11 +21,15 @@ public class TokenCustomizerConfig {
             String username = context.getPrincipal().getName();
             userRepository.findByUsername(username).ifPresent(user -> {
                 List<String> roles = List.copyOf(user.getRoles());
+                List<String> groups = (user.getGroup() != null && user.getGroup().getId() != null)
+                        ? List.of(user.getGroup().getId())
+                        : List.of();
 
                 context.getClaims()
+                        .claim("sub", user.getId())
+                        .claim("id", user.getId())
                         .claim("roles", roles)
-                        .claim("group_id", user.getGroup().getId())
-                        .claim("group_name", user.getGroup().getName())
+                        .claim("groups", groups)
                         .claim("email", user.getEmail())
                         .claim("preferred_username", user.getUsername());
             });

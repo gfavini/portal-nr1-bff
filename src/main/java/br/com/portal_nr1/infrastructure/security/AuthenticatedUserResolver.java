@@ -10,16 +10,25 @@ import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.log4j.Log4j2;
+
 @Component
+@Log4j2
 public class AuthenticatedUserResolver {
 
 	public AuthenticatedUser resolve(Principal principal, Authentication authentication) {
+		log.debug("Auth type: {} | Authorities: {}", 
+			authentication != null ? authentication.getClass().getSimpleName() : "null",
+			authentication != null ? authentication.getAuthorities() : "none");
+		
+		String id = resolveId(authentication);
 		List<String> roles = authoritiesByPrefix(authentication, "ROLE_");
 		List<String> groups = authoritiesByPrefix(authentication, "GROUP_");
 		String email = resolveEmail(principal, authentication);
 		String username = resolveUsername(principal, authentication, email);
 
-		return new AuthenticatedUser(username, email, roles, groups);
+		log.debug("Resolved user: {} | id: {} | roles: {} | groups: {}", username, id, roles, groups);
+		return new AuthenticatedUser(id, username, email, roles, groups);
 	}
 
 	private static List<String> authoritiesByPrefix(Authentication authentication, String prefix) {
@@ -95,5 +104,40 @@ public class AuthenticatedUserResolver {
 		}
 
 		return principal != null ? principal.getName() : "";
+	}
+
+	private static String resolveId(Authentication authentication) {
+		if (authentication instanceof OAuth2AuthenticationToken oauth
+				&& oauth.getPrincipal() instanceof DefaultOidcUser oidc) {
+			String sub = oidc.getSubject();
+			if (sub != null && !sub.isBlank()) {
+				return sub;
+			}
+
+			Object claimId = oidc.getClaims().get("id");
+			if (claimId instanceof String idClaim && !idClaim.isBlank()) {
+				return idClaim;
+			}
+
+			Object claimSub = oidc.getClaims().get("sub");
+			if (claimSub instanceof String subClaim && !subClaim.isBlank()) {
+				return subClaim;
+			}
+		}
+
+		if (authentication instanceof JwtAuthenticationToken jwtAuthenticationToken) {
+			var jwt = jwtAuthenticationToken.getToken();
+			String id = jwt.getClaimAsString("id");
+			if (id != null && !id.isBlank()) {
+				return id;
+			}
+
+			String sub = jwt.getClaimAsString("sub");
+			if (sub != null && !sub.isBlank()) {
+				return sub;
+			}
+		}
+
+		return "";
 	}
 }
