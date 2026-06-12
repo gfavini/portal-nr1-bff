@@ -42,4 +42,5 @@ skills-lock**
 /target/
 
 ### Docker Volumes ###
-.keycloak_data/
+.keycloak**
+.github/**

@@ -1,5 +1,0 @@
-FROM quay.io/keycloak/keycloak:26.5.3
-
-# Copia o seu setup inicial "congelado" para dentro da imagem
-# O --chown garante que o Keycloak terá permissão para ler os arquivos
-COPY --chown=1000:1000 ./.keycloak-data-bkp /opt/keycloak/data
